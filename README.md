@@ -1,5 +1,7 @@
 # MOTIF — a soundscape atelier
 
+**Live: https://motif-liard-three.vercel.app** · [Source](https://github.com/devtechedge/motif)
+
 A premium, immersive instrument for composing atmospheres: focus, calm, reading,
 creative work, and drift. Less a dashboard, more an instrument you enter.
 
