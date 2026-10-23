@@ -6,6 +6,7 @@ synthesized live in your browser with the Web Audio API: no recordings, no
 network calls, nothing collected.
 
 [![Live Demo](https://img.shields.io/website?url=https%3A%2F%2Fmotif-liard-three.vercel.app%2F&up_color=%2366d1c7&up_message=live&down_color=%23b4573f&down_message=down&label=Live%20Demo)](https://motif-liard-three.vercel.app)
+[![CI](https://github.com/devtechedge/motif/actions/workflows/ci.yml/badge.svg)](https://github.com/devtechedge/motif/actions/workflows/ci.yml)
 ![React 19](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)
