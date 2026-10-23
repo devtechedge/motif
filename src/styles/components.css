@@ -4,7 +4,7 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(8, 9, 13, 0.72);
+  background: var(--chrome-glass);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
@@ -43,6 +43,12 @@
   white-space: nowrap;
 }
 
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .topbar-status {
   display: flex;
   align-items: baseline;
@@ -53,7 +59,7 @@
 }
 
 .status-live {
-  color: var(--accent);
+  color: var(--accent-text);
   letter-spacing: 0.06em;
 }
 
@@ -171,6 +177,7 @@
   max-width: 52ch;
 }
 
+/* over the always-dark canvas field, the scene accent stays light in both themes */
 .scene-eyebrow {
   font-family: var(--font-mono);
   font-size: 11.5px;
@@ -334,7 +341,7 @@
 }
 
 .mix-row[data-on='true'] .mix-icon {
-  color: var(--accent);
+  color: var(--accent-text);
   opacity: 1;
 }
 
@@ -714,7 +721,7 @@
   gap: 12px;
   padding: 8px 10px 8px 16px;
   border-radius: 999px;
-  background: rgba(12, 15, 21, 0.88);
+  background: var(--chrome-glass-strong);
   border: 1px solid var(--line-strong);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -767,7 +774,43 @@
   color: var(--accent-ink);
 }
 
-/* ============================================================== toasts */
+/* ========================================================= theme toggle */
+
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+  font-size: 15px;
+}
+
+.theme-icons {
+  position: relative;
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+
+.theme-icons svg {
+  position: absolute;
+  inset: 0;
+  transition: opacity 300ms var(--ease), transform 300ms var(--ease),
+    filter 300ms var(--ease);
+}
+
+html[data-theme='dark'] .i-moon,
+html[data-theme='light'] .i-sun {
+  opacity: 0;
+  transform: scale(0.75);
+  filter: blur(4px);
+}
+
+html[data-theme='dark'] .i-sun,
+html[data-theme='light'] .i-moon {
+  opacity: 1;
+  transform: scale(1);
+  filter: blur(0);
+}
+
+/* =============================================================== toasts */
 
 .toasts {
   position: fixed;
@@ -789,7 +832,7 @@
   gap: 10px;
   padding: 10px 12px 10px 14px;
   border-radius: var(--r-m);
-  background: rgba(17, 21, 29, 0.94);
+  background: var(--chrome-glass-strong);
   border: 1px solid var(--line-strong);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -820,7 +863,7 @@
 
 .toast-icon {
   font-size: 16px;
-  color: var(--accent);
+  color: var(--accent-text);
   flex: none;
   display: inline-flex;
 }
@@ -859,6 +902,10 @@
     scroll-snap-type: x proximity;
     padding-bottom: 6px;
     margin-left: -2px;
+  }
+
+  .plates.scroll-pane {
+    overflow-x: auto;
   }
 
   .plate {

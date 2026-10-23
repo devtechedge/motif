@@ -17,7 +17,7 @@ export function SessionTimer({ kind, minutes, remaining, onSelect }: SessionTime
         <h3>Session</h3>
         <p className="panel-sub">
           {kind === 'done'
-            ? 'Complete — select a length to begin another'
+            ? 'Complete. Select a length to begin another'
             : kind === 'fading'
               ? 'Fading out now, like a tide going out'
               : 'Fades out gently when the time is up'}

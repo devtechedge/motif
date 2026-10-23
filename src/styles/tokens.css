@@ -1,5 +1,6 @@
-:root {
-  /* ink — deep, slightly warm charcoal */
+:root,
+html[data-theme='dark'] {
+  /* ink: deep, slightly warm charcoal */
   --ink-0: #08090d;
   --ink-1: #0c0f15;
   --ink-2: #11151d;
@@ -9,17 +10,75 @@
   --line: rgba(233, 228, 214, 0.09);
   --line-strong: rgba(233, 228, 214, 0.17);
 
-  /* text — warm paper tones */
+  /* text: warm paper tones */
   --text-1: #eae4d6;
   --text-2: #a9aeb8;
   --text-3: #7b818d;
 
-  /* accent is set per scene by the app (default: moonlit brass) */
-  --accent: #c9b68c;
-  --accent-soft: rgba(201, 182, 140, 0.16);
-  --accent-ink: #10121a;
   --danger: #d08c7a;
 
+  /* glass surfaces (topbar, nowbar, toasts) */
+  --chrome-glass: rgba(8, 9, 13, 0.72);
+  --chrome-glass-strong: rgba(12, 15, 21, 0.88);
+
+  --slider-track: rgba(233, 228, 214, 0.14);
+  --scroll-thumb: rgba(150, 156, 170, 0.26);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 18px 48px -16px rgba(0, 0, 0, 0.6);
+}
+
+html[data-theme='light'] {
+  /* titanium silver + ink */
+  --ink-0: #dfe3ea;
+  --ink-1: #e9edf2;
+  --ink-2: #eef1f6;
+  --ink-3: #f4f6fa;
+
+  --line: rgba(28, 32, 40, 0.1);
+  --line-strong: rgba(28, 32, 40, 0.2);
+
+  --text-1: #1d222b;
+  --text-2: #454c58;
+  --text-3: #67707f;
+
+  --danger: #b4573f;
+
+  --chrome-glass: rgba(226, 230, 237, 0.82);
+  --chrome-glass-strong: rgba(235, 238, 243, 0.94);
+
+  --slider-track: rgba(28, 32, 40, 0.18);
+  --scroll-thumb: rgba(70, 78, 92, 0.3);
+
+  --shadow-1: 0 1px 2px rgba(30, 34, 44, 0.14);
+  --shadow-2: 0 18px 44px -18px rgba(30, 34, 44, 0.35);
+}
+
+:root {
+  /* accent is set per scene by the app (default: moonlit brass) */
+  --accent: #c9b68c;
+  --accent-ink: #10121a;
+}
+
+html {
+  color-scheme: dark;
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
+}
+
+/* accent derivatives resolved inside the app scope, where --accent is set */
+.app {
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --accent-text: var(--accent);
+}
+
+html[data-theme='light'] .app {
+  --accent-text: color-mix(in srgb, var(--accent) 58%, #222834);
+}
+
+.app {
   --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
   --font-ui: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'Spline Sans Mono', ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
@@ -32,9 +91,6 @@
   --dur-2: 240ms;
   --dur-3: 520ms;
   --ease: cubic-bezier(0.22, 0.61, 0.21, 1);
-
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-2: 0 18px 48px -16px rgba(0, 0, 0, 0.6);
 
   --pad: clamp(16px, 4vw, 44px);
   --field-h: clamp(360px, 56vh, 600px);

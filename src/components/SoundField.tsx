@@ -107,7 +107,7 @@ export function SoundField({
       </div>
 
       {!hasEverPlayed && !playing && (
-        <p className="field-hint">Everything you hear is synthesized live — press play and shape the five layers while it breathes.</p>
+        <p className="field-hint">Everything you hear is synthesized live. Press play and shape the five layers while it breathes.</p>
       )}
 
       <button

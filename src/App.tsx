@@ -6,6 +6,7 @@ import { SavedMixes } from './components/SavedMixes'
 import { SceneLibrary } from './components/SceneLibrary'
 import { SessionTimer } from './components/SessionTimer'
 import { SoundField } from './components/SoundField'
+import { ThemeToggle } from './components/ThemeToggle'
 import { Toasts, type Toast } from './components/Toasts'
 import { Transport } from './components/Transport'
 import { suggestMixName } from './lib/gain'
@@ -119,7 +120,7 @@ export function App() {
   const togglePlay = useCallback(() => {
     const engine = getEngine()
     if (!engine.supported) {
-      setAudioError('Web Audio is unavailable in this browser, so MOTIF stays silent — but the instrument still works.')
+      setAudioError('Web Audio is unavailable in this browser, so MOTIF stays silent, but the instrument still works.')
       pushToast('warn', 'Audio is unavailable here. The field still breathes, just quietly.')
       return
     }
@@ -145,7 +146,7 @@ export function App() {
       .catch(() => {
         setPlaying('paused')
         setAudioError('Audio could not start on this device. Check sound output, then press play again.')
-        pushToast('warn', 'Audio could not start — press play again in a moment.')
+        pushToast('warn', 'Audio could not start. Press play again in a moment.')
       })
   }, [getEngine, pushToast, storage, timerKind])
 
@@ -206,7 +207,7 @@ export function App() {
         setTimerKind('done')
         setElapsed(timerTotalRef.current)
         engine.chime()
-        pushToast('success', 'Session complete — the sound faded out gently.')
+        pushToast('success', 'Session complete. The sound faded out gently.')
         chimeTimerRef.current = window.setTimeout(() => {
           chimeTimerRef.current = null
           if (!engine.playing) engine.stop()
@@ -275,7 +276,7 @@ export function App() {
       setSaved((prev) => [entry, ...prev])
       if (!storage.set(SAVED_MIXES_KEY, [entry, ...saved])) {
         // adapter rejected the write; keep in-memory list, inform honestly
-        pushToast('warn', 'Could not write to storage — kept for this session only.')
+        pushToast('warn', 'Could not write to storage. Kept for this session only.')
       } else {
         pushToast('success', `Saved “${name}” to the shelf.`)
       }
@@ -344,10 +345,13 @@ export function App() {
             <span className="brand-mark">MOTIF</span>
             <span className="brand-sub">soundscape atelier</span>
           </span>
-          <span className="topbar-status" aria-label="Playback status">
-            {playing === 'playing' && !muted && <span className="status-live">● live</span>}
-            {muted && playing === 'playing' && <span className="status-muted">muted</span>}
-          </span>
+          <div className="topbar-right">
+            <span className="topbar-status" aria-label="Playback status">
+              {playing === 'playing' && !muted && <span className="status-live">● live</span>}
+              {muted && playing === 'playing' && <span className="status-muted">muted</span>}
+            </span>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
@@ -395,7 +399,7 @@ export function App() {
 
       <footer className="foot">
         <p>
-          Every sound is synthesized live in your browser — no recordings, no network, nothing collected.
+          Every sound is synthesized live in your browser. No recordings, no network, nothing collected.
         </p>
       </footer>
 

@@ -64,7 +64,7 @@ export function SavedMixes({ saved, suggestedName, storageOk, onSave, onLoad, on
 
       {!storageOk && (
         <p className="storage-note">
-          Storage is unavailable in this browser — saved mixes last for this session only.
+          Storage is unavailable in this browser. Saved mixes last for this session only.
         </p>
       )}
 
