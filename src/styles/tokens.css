@@ -1,0 +1,41 @@
+:root {
+  /* ink — deep, slightly warm charcoal */
+  --ink-0: #08090d;
+  --ink-1: #0c0f15;
+  --ink-2: #11151d;
+  --ink-3: #171c26;
+
+  /* hairlines */
+  --line: rgba(233, 228, 214, 0.09);
+  --line-strong: rgba(233, 228, 214, 0.17);
+
+  /* text — warm paper tones */
+  --text-1: #eae4d6;
+  --text-2: #a9aeb8;
+  --text-3: #7b818d;
+
+  /* accent is set per scene by the app (default: moonlit brass) */
+  --accent: #c9b68c;
+  --accent-soft: rgba(201, 182, 140, 0.16);
+  --accent-ink: #10121a;
+  --danger: #d08c7a;
+
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-ui: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Spline Sans Mono', ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
+
+  --r-s: 8px;
+  --r-m: 12px;
+  --r-l: 18px;
+
+  --dur-1: 140ms;
+  --dur-2: 240ms;
+  --dur-3: 520ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.21, 1);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 18px 48px -16px rgba(0, 0, 0, 0.6);
+
+  --pad: clamp(16px, 4vw, 44px);
+  --field-h: clamp(360px, 56vh, 600px);
+}
