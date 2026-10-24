@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { AudioEngine } from './audio/engine'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Mixer } from './components/Mixer'
 import { NowPlaying } from './components/NowPlaying'
 import { SavedMixes } from './components/SavedMixes'
@@ -10,6 +11,7 @@ import { ThemeToggle } from './components/ThemeToggle'
 import { Toasts, type Toast } from './components/Toasts'
 import { Transport } from './components/Transport'
 import { suggestMixName } from './lib/gain'
+import { createStorageAlerter } from './lib/storageAlerter'
 import {
   PLAYED_KEY,
   SAVED_MIXES_KEY,
@@ -40,6 +42,8 @@ function vibrate(ms: number): void {
     // not supported — purely optional
   }
 }
+
+let toastSeq = 0
 
 export function App() {
   const storage = useMemo<StorageAdapter>(() => detectStorage(), [])
@@ -96,22 +100,30 @@ export function App() {
     getEngine().setMuted(muted)
   }, [muted, getEngine])
 
-  // ------------------------------------------------------------- persistence
-  useEffect(() => {
-    storage.set(SESSION_KEY, { sceneId, mix, volume } satisfies SessionSnapshot)
-  }, [storage, sceneId, mix, volume])
-
-  useEffect(() => {
-    storage.set(SAVED_MIXES_KEY, saved)
-  }, [storage, saved])
-
   // ------------------------------------------------------------------ toasts
-  const toastId = useRef(0)
   const pushToast = useCallback((kind: Toast['kind'], text: string) => {
-    const id = ++toastId.current
+    const id = ++toastSeq
     setToasts((prev) => [...prev.slice(-2), { id, kind, text }])
     window.setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4200)
   }, [])
+
+  // ------------------------------------------------------------- persistence
+  // one honest notice per session when writes start failing, never spam
+  const storageAlerter = useMemo(
+    () =>
+      createStorageAlerter(() => {
+        pushToast('warn', 'Storage is not saving changes. The app still works, but saves last only for this session.')
+      }),
+    [pushToast],
+  )
+
+  useEffect(() => {
+    storageAlerter.onResult(storage.set(SESSION_KEY, { sceneId, mix, volume } satisfies SessionSnapshot))
+  }, [storage, storageAlerter, sceneId, mix, volume])
+
+  useEffect(() => {
+    storageAlerter.onResult(storage.set(SAVED_MIXES_KEY, saved))
+  }, [storage, storageAlerter, saved])
 
   // a call or OS interruption suspended the context mid-session: say so
   useEffect(() => {
@@ -393,7 +405,8 @@ export function App() {
       data-scene={scene.id}
       style={{ '--accent': scene.palette.accent } as CSSProperties}
     >
-      <header className="topbar">
+      <ErrorBoundary contextLabel={scene.name}>
+        <header className="topbar">
         <div className="topbar-inner">
           <h1 className="sr-only">MOTIF, a soundscape atelier</h1>
           <span className="brand">
@@ -468,6 +481,7 @@ export function App() {
         onMute={() => setMuted((m) => !m)}
       />
       <Toasts toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
+      </ErrorBoundary>
     </div>
   )
 }
