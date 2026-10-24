@@ -64,7 +64,7 @@ network calls, nothing collected.
 | Build | Vite 7 |
 | Audio | Web Audio API, custom synthesis engine (no samples) |
 | Visuals | Canvas 2D, custom generative renderers |
-| Tests | Vitest (29 unit tests), Playwright (5 e2e smokes) |
+| Tests | Vitest (60 unit tests), Playwright (20 e2e tests) |
 | Hosting | Vercel (static) |
 
 ## Quick start
