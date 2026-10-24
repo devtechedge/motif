@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const PORT = 4173
+// private port: a shared 4173 collides with other projects' preview servers
+const PORT = 4317
 const baseURL = `http://localhost:${PORT}`
 
 export default defineConfig({

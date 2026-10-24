@@ -11,7 +11,7 @@
 import { mkdir } from 'node:fs/promises'
 import { chromium } from 'playwright'
 
-const BASE = process.env.CAPTURE_URL ?? 'http://localhost:4173'
+const BASE = process.env.CAPTURE_URL ?? 'http://localhost:4317'
 const OUT = 'docs/screenshots'
 const LAUNCH_ARGS = ['--autoplay-policy=no-user-gesture-required']
 
