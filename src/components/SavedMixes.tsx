@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import type { SavedMix } from '../types'
 import { getScene } from '../scenes'
 import { describeMix } from '../lib/gain'
@@ -16,6 +16,21 @@ interface SavedMixesProps {
 
 export function SavedMixes({ saved, suggestedName, storageOk, onSave, onLoad, onDelete }: SavedMixesProps) {
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const headingRef = useRef<HTMLHeadingElement | null>(null)
+  // where focus should land after the next shelf mutation removes the focused row
+  const pendingFocusRef = useRef<{ rowId: string | null } | null>(null)
+
+  useEffect(() => {
+    const pending = pendingFocusRef.current
+    if (!pending) return
+    pendingFocusRef.current = null
+    if (pending.rowId) {
+      const row = document.getElementById(`saved-row-${pending.rowId}`)
+      row?.querySelector<HTMLButtonElement>('button')?.focus()
+    } else {
+      headingRef.current?.focus()
+    }
+  }, [saved])
 
   const submit = () => {
     const value = inputRef.current?.value.trim() ?? ''
@@ -32,10 +47,19 @@ export function SavedMixes({ saved, suggestedName, storageOk, onSave, onLoad, on
     inputRef.current?.blur()
   }
 
+  const handleDelete = (entry: SavedMix) => {
+    const index = saved.findIndex((s) => s.id === entry.id)
+    const neighbor = saved[index + 1] ?? saved[index - 1]
+    pendingFocusRef.current = { rowId: neighbor ? neighbor.id : null }
+    onDelete(entry)
+  }
+
   return (
     <section className="saved" aria-label="Saved mixes">
       <header className="section-head">
-        <h3 className="overline">Shelf</h3>
+        <h3 className="overline" ref={headingRef} tabIndex={-1}>
+          Shelf
+        </h3>
         <p className="section-sub">Keep the mixes you love, come back to them anytime</p>
       </header>
 
@@ -77,7 +101,7 @@ export function SavedMixes({ saved, suggestedName, storageOk, onSave, onLoad, on
           {saved.map((mix) => {
             const scene = getScene(mix.sceneId)
             return (
-              <li key={mix.id} className="saved-item">
+              <li key={mix.id} className="saved-item" id={`saved-row-${mix.id}`}>
                 <span className="saved-dot" aria-hidden="true" style={{ background: scene.palette.accent }} />
                 <span className="saved-meta">
                   <span className="saved-name">{mix.name}</span>
@@ -92,7 +116,7 @@ export function SavedMixes({ saved, suggestedName, storageOk, onSave, onLoad, on
                   <button
                     type="button"
                     className="icon-btn"
-                    onClick={() => onDelete(mix)}
+                    onClick={() => handleDelete(mix)}
                     aria-label={`Delete ${mix.name}`}
                     title={`Delete ${mix.name}`}
                   >
