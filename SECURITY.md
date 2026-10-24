@@ -10,6 +10,11 @@ of the small surface that exists.
   Audio API. No audio input (microphone or otherwise) is ever requested.
 - Makes zero network requests at runtime: fonts are self-hosted, no analytics,
   no external scripts, no API calls.
+- Share links encode the current mix in the URL fragment (`#m1.<data>`).
+  Fragments are never sent to any server by browsers, and decoded links pass
+  through the same validation as persisted data: unknown scenes, malformed
+  layer states, and out-of-range numbers are dropped or clamped, never applied
+  raw.
 - Stores three things in `localStorage`: saved mixes, the last session
   (scene, layer mix, volume), and the theme preference. All values are written
   by the app itself.

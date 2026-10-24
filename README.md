@@ -53,8 +53,19 @@ network calls, nothing collected.
 - **Shelf.** Save named mixes (scene, layer mix, master volume) to local
   storage; load and delete them. If storage is blocked, the app says so and
   keeps saves for the session.
-- **Dark and light themes**, persisted, with no flash on load, plus reduced
-  motion support and full keyboard access.
+- **Shareable mixes.** Copy a link to the exact mix (scene, layer states and
+  levels, volume) as a URL hash. Opening it restores everything. No server
+  involved; the mix rides in the link itself.
+- **A real shelf.** Rename, duplicate, export and import your saved mixes as
+  JSON, with a 24-mix cap.
+- **Session tools.** Preset or custom session lengths (1-180 min) with a gentle
+  fade-out, a background-tab countdown in the tab title, and remaining time in
+  the now-playing bar.
+- **Keyboard shortcuts.** Space to play or pause, M to mute, S to stop, and ?
+  for the shortcut sheet. Shortcuts never fire while typing.
+- **Dark and light themes** that follow your operating system on first visit,
+  persist once you choose, and never flash on load, plus reduced motion
+  support and full keyboard access.
 
 ## Stack
 
@@ -64,7 +75,7 @@ network calls, nothing collected.
 | Build | Vite 7 |
 | Audio | Web Audio API, custom synthesis engine (no samples) |
 | Visuals | Canvas 2D, custom generative renderers |
-| Tests | Vitest (60 unit tests), Playwright (20 e2e tests) |
+| Tests | Vitest (69 unit tests), Playwright (27 e2e tests) |
 | Hosting | Vercel (static) |
 
 ## Quick start
@@ -100,6 +111,13 @@ The engine in `src/audio/` builds each scene from five voice types:
 
 Voices sit on per-layer buses feeding a master gain and gentle compressor.
 Scene changes crossfade; the graph is disposed cleanly on teardown.
+
+## Privacy
+
+MOTIF collects nothing. There is no analytics, no telemetry, no cookies and no
+network requests after the page loads. Saved mixes and settings live in your
+browser's local storage, and a shared-mix link carries its data in the URL
+fragment, which browsers never send to a server.
 
 ## License
 
