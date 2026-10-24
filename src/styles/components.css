@@ -109,6 +109,14 @@
   box-shadow: var(--shadow-2);
   background: var(--ink-1);
   transition: border-color var(--dur-3) var(--ease);
+  /* the canvas stays ink-dark in both themes, so the overlay reads dark-surface tokens */
+  --text-1: #eae4d6;
+  --text-2: #a9aeb8;
+  --text-3: #7b818d;
+  --line: rgba(233, 228, 214, 0.09);
+  --line-strong: rgba(233, 228, 214, 0.17);
+  --chrome-glass: rgba(8, 9, 13, 0.72);
+  --chrome-glass-strong: rgba(12, 15, 21, 0.88);
 }
 
 .field-canvas {
@@ -196,6 +204,8 @@
   letter-spacing: -0.01em;
   margin-bottom: 10px;
   text-wrap: balance;
+  /* explicit: sits on the always-dark canvas, must not inherit theme ink */
+  color: var(--text-1);
 }
 
 .scene-desc {
@@ -364,6 +374,15 @@
   color: #9aa0ac;
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.mix-note {
+  margin-top: 12px;
+  padding: 9px 12px;
+  border-radius: var(--r-s);
+  border: 1px dashed var(--line-strong);
+  font-size: 12.5px;
+  color: var(--text-2);
 }
 
 /* =========================================================== transport */

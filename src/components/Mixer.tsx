@@ -9,6 +9,7 @@ interface MixerProps {
 }
 
 export function Mixer({ mix, onToggle, onGain }: MixerProps) {
+  const allOff = LAYERS.every((l) => !mix[l.id].enabled)
   return (
     <section className="panel mixer" aria-label="Layer mixer">
       <header className="panel-head">
@@ -56,6 +57,11 @@ export function Mixer({ mix, onToggle, onGain }: MixerProps) {
           )
         })}
       </ul>
+      {allOff && (
+        <p className="mix-note" role="status">
+          Every layer is off. The scene will be silent until you switch one on.
+        </p>
+      )}
     </section>
   )
 }
