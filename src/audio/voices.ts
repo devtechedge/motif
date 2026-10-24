@@ -79,15 +79,32 @@ function createVoiceBase(ctx: AudioContext, dest: AudioNode, fadeIn: number, lev
       for (const id of timers) window.clearInterval(id)
       out.gain.cancelScheduledValues(t)
       out.gain.setTargetAtTime(0, t, hard ? 0.005 : 0.1)
-      const stopAt = hard ? t : t + 0.55
+      if (hard) {
+        // immediate teardown: stop sources and drop the graph now
+        for (const s of sources) {
+          try {
+            s.stop(t)
+          } catch {
+            // already stopped
+          }
+        }
+        for (const n of nodes) {
+          try {
+            n.disconnect()
+          } catch {
+            // already disconnected
+          }
+        }
+        return
+      }
+      // soft dispose: let the 100ms fade tail finish before disconnecting
       for (const s of sources) {
         try {
-          s.stop(stopAt)
+          s.stop(t + 0.55)
         } catch {
           // already stopped
         }
       }
-      const disconnectAt = hard ? 0 : 750
       window.setTimeout(() => {
         for (const n of nodes) {
           try {
@@ -96,7 +113,7 @@ function createVoiceBase(ctx: AudioContext, dest: AudioNode, fadeIn: number, lev
             // already disconnected
           }
         }
-      }, disconnectAt)
+      }, 750)
     },
   }
 }

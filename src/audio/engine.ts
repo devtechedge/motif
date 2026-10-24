@@ -22,8 +22,9 @@ export class AudioEngine {
   private ctx: AudioContext | null = null
   private noise: NoiseBank | null = null
   private master: GainNode | null = null
-  private compressor: DynamicsCompressorNode | null = null
   private analyser: AnalyserNode | null = null
+  /** Completion chime path: respects volume and mute, but not the session fade. */
+  private chimeBus: GainNode | null = null
   private levelBuf = new Float32Array(512)
   private buses = new Map<LayerId, GainNode>()
   private voices: Voice[] = []
@@ -36,8 +37,16 @@ export class AudioEngine {
   private elapsedBase = 0
   private needsBuild = true
   private timers: number[] = []
+  /** Monotonic sequence guarding async play(): a stale resume must not build. */
+  private playSeq = 0
   /** Called when the system suspends the context out from under us (calls, interruptions). */
   onExternalSuspend: (() => void) | null = null
+
+  /**
+   * `ctxFactory` exists for tests: production passes nothing and the context
+   * is created lazily on the first play, from a user gesture.
+   */
+  constructor(private readonly ctxFactory?: () => AudioContext) {}
 
   get supported(): boolean {
     return typeof window !== 'undefined' && typeof window.AudioContext !== 'undefined'
@@ -47,9 +56,19 @@ export class AudioEngine {
     return this._playing
   }
 
+  /** Number of live voice instances; should stay constant across scene changes. */
+  get voiceCount(): number {
+    return this.voices.length
+  }
+
+  /** Observability for tests: a layer bus gain parameter. */
+  layerBusParam(id: LayerId): AudioParam | null {
+    return this.buses.get(id)?.gain ?? null
+  }
+
   private ensureContext(): AudioContext {
     if (this.ctx) return this.ctx
-    const ctx = new AudioContext()
+    const ctx = this.ctxFactory ? this.ctxFactory() : new AudioContext()
     const master = ctx.createGain()
     master.gain.value = 0
     const comp = ctx.createDynamicsCompressor()
@@ -64,6 +83,9 @@ export class AudioEngine {
     master.connect(comp)
     comp.connect(ctx.destination)
     master.connect(analyser)
+    const chimeBus = ctx.createGain()
+    chimeBus.gain.value = 0
+    chimeBus.connect(comp)
     for (const id of LAYER_IDS) {
       const bus = ctx.createGain()
       bus.gain.value = 0
@@ -72,8 +94,8 @@ export class AudioEngine {
     }
     this.noise = new NoiseBank(ctx)
     this.master = master
-    this.compressor = comp
     this.analyser = analyser
+    this.chimeBus = chimeBus
     this.levelBuf = new Float32Array(analyser.fftSize)
     this.ctx = ctx
     ctx.onstatechange = () => {
@@ -91,7 +113,9 @@ export class AudioEngine {
   async play(): Promise<void> {
     if (!this.supported) throw new Error('Web Audio is not supported in this browser')
     const ctx = this.ensureContext()
+    const seq = ++this.playSeq
     if (ctx.state !== 'running') await ctx.resume()
+    if (seq !== this.playSeq) return // superseded by a later play, pause, stop, or completion
     if (this.needsBuild || this.voices.length === 0) this.build()
     this._playing = true
     this.startedAt = ctx.currentTime
@@ -99,6 +123,7 @@ export class AudioEngine {
   }
 
   pause(): void {
+    this.playSeq++
     if (!this.ctx || !this._playing) return
     this.elapsedBase += this.ctx.currentTime - this.startedAt
     this._playing = false
@@ -109,6 +134,7 @@ export class AudioEngine {
   }
 
   stop(): void {
+    this.playSeq++
     this.elapsedBase = 0
     this._playing = false
     if (this.ctx) {
@@ -121,17 +147,58 @@ export class AudioEngine {
     }
   }
 
-  /** Long fade used by the session timer; caller decides what happens next. */
+  /**
+   * Reliable session completion, owned by the engine so React state can never
+   * diverge from the audio lifecycle: cancel the fade, ramp to exact silence,
+   * freeze elapsed at the final value, retire voices (a later play rebuilds),
+   * and ring the completion chime through a path that respects volume + mute
+   * but not the just-faded master.
+   */
+  completeSession(finalElapsed: number): void {
+    this.playSeq++
+    if (!this.ctx) return
+    const t = this.ctx.currentTime
+    if (this.master) {
+      this.master.gain.cancelScheduledValues(t)
+      this.master.gain.setTargetAtTime(0, t, 0.04)
+    }
+    this.elapsedBase = finalElapsed
+    this._playing = false
+    this.disposeVoices(false)
+    this.needsBuild = true
+    this.chime()
+  }
+
+  /** Called after the chime has rung: full teardown unless playback restarted. */
+  finalizeAfterChime(): void {
+    if (this._playing) return
+    this.stop()
+  }
+
+  /** Cancels a session fade and restores the normal master target. */
+  restoreMaster(): void {
+    if (!this.ctx || !this.master) return
+    this.master.gain.cancelScheduledValues(this.ctx.currentTime)
+    this.rampMaster(0.12)
+  }
+
+  /**
+   * Long fade used by the session timer. Time constant is fade/6 so the
+   * output is about 52 dB down (e^-6) at the nominal end of the interval,
+   * rather than merely 26 dB down with the more common fade/3 choice.
+   * The caller decides what happens at the end.
+   */
   beginFade(seconds: number): void {
     if (!this.ctx || !this.master) return
     this.master.gain.cancelScheduledValues(this.ctx.currentTime)
-    this.master.gain.setTargetAtTime(0, this.ctx.currentTime, Math.max(0.05, seconds / 3))
+    this.master.gain.setTargetAtTime(0, this.ctx.currentTime, Math.max(0.05, seconds / 6))
   }
 
-  /** Very quiet two-note bell when a session timer completes. Respects mute. */
+  /** Quiet two-note completion bell. Respects mute and master volume. */
   chime(): void {
-    if (!this.ctx || !this.compressor || this.muted) return
+    if (!this.ctx || !this.chimeBus || this.muted) return
     const t = this.ctx.currentTime + 0.05
+    this.chimeBus.gain.setTargetAtTime(masterCurve(this.volume), t, 0.01)
     for (const [freq, at] of [
       [523.25, 0],
       [659.25, 0.42],
@@ -144,7 +211,7 @@ export class AudioEngine {
       g.gain.linearRampToValueAtTime(0.055, t + at + 0.06)
       g.gain.setTargetAtTime(0, t + at + 0.35, 0.55)
       o.connect(g)
-      g.connect(this.compressor)
+      g.connect(this.chimeBus)
       o.start(t + at)
       o.stop(t + at + 2.5)
     }
@@ -159,7 +226,7 @@ export class AudioEngine {
 
   setMuted(m: boolean): void {
     this.muted = m
-    this.rampMaster(0.1)
+    this.rampMaster(m ? 0.03 : 0.1)
   }
 
   get isMuted(): boolean {
@@ -263,6 +330,7 @@ export class AudioEngine {
 
   dispose(): void {
     this._playing = false
+    this.playSeq++
     for (const id of this.timers) window.clearTimeout(id)
     this.timers = []
     this.disposeVoices(true)
@@ -271,8 +339,8 @@ export class AudioEngine {
       const ctx = this.ctx
       this.ctx = null
       this.master = null
-      this.compressor = null
       this.analyser = null
+      this.chimeBus = null
       void ctx.close().catch(() => {})
     }
   }
