@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { AudioEngine } from './audio/engine'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { HowItWorksDialog, ShortcutsDialog } from './components/Dialogs'
+import { InfoIcon, KeyboardIcon } from './components/icons'
 import { Mixer } from './components/Mixer'
 import { NowPlaying } from './components/NowPlaying'
-import { SavedMixes } from './components/SavedMixes'
+import { SavedMixes, MAX_SAVED } from './components/SavedMixes'
 import { SceneLibrary } from './components/SceneLibrary'
 import { SessionTimer } from './components/SessionTimer'
 import { SoundField } from './components/SoundField'
@@ -12,6 +14,7 @@ import { Toasts, type Toast } from './components/Toasts'
 import { Transport } from './components/Transport'
 import { suggestMixName } from './lib/gain'
 import { createStorageAlerter } from './lib/storageAlerter'
+import { formatClock } from './lib/format'
 import {
   PLAYED_KEY,
   SAVED_MIXES_KEY,
@@ -20,6 +23,7 @@ import {
   type StorageAdapter,
 } from './lib/persistence'
 import { sanitizeSavedMixes, sanitizeSession, type SessionSnapshot } from './lib/sanitize'
+import { copyText, decodeMix, encodeMix } from './lib/share'
 import { timerTick } from './lib/timer'
 import { SCENES, getScene } from './scenes'
 import {
@@ -48,11 +52,14 @@ let toastSeq = 0
 export function App() {
   const storage = useMemo<StorageAdapter>(() => detectStorage(), [])
 
+  // a shared link (URL hash) wins over the stored session: it is an explicit action
+  const shared = useMemo(() => decodeMix(window.location.hash), [])
   const restored = useMemo(() => sanitizeSession(storage.get<unknown>(SESSION_KEY)), [storage])
-  const [sceneId, setSceneId] = useState(() => restored?.sceneId ?? SCENES[0].id)
+  const initial = shared ?? restored
+  const [sceneId, setSceneId] = useState(() => initial?.sceneId ?? SCENES[0].id)
   const scene = getScene(sceneId)
-  const [mix, setMix] = useState<LayerMix>(() => restored?.mix ?? cloneMix(getScene(restored?.sceneId ?? SCENES[0].id).defaultMix))
-  const [volume, setVolume] = useState(() => restored?.volume ?? 0.75)
+  const [mix, setMix] = useState<LayerMix>(() => initial?.mix ?? cloneMix(getScene(initial?.sceneId ?? SCENES[0].id).defaultMix))
+  const [volume, setVolume] = useState(() => initial?.volume ?? 0.75)
   const [muted, setMuted] = useState(false)
   const [playing, setPlaying] = useState<PlayState>('idle')
   const [elapsed, setElapsed] = useState(0)
@@ -65,6 +72,8 @@ export function App() {
   const [remaining, setRemaining] = useState(0)
   const [fieldVisible, setFieldVisible] = useState(true)
   const [toasts, setToasts] = useState<Toast[]>([])
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false)
 
   // ---- engine (lazy; the AudioContext itself is only created on play) ----
   const engineRef = useRef<AudioEngine | null>(null)
@@ -80,12 +89,16 @@ export function App() {
   // mirrors for event handlers — no stale closures, no side effects in updaters
   const mixRef = useRef(mix)
   const sceneIdRef = useRef(sceneId)
+  const volumeRef = useRef(volume)
   useEffect(() => {
     mixRef.current = mix
   }, [mix])
   useEffect(() => {
     sceneIdRef.current = sceneId
   }, [sceneId])
+  useEffect(() => {
+    volumeRef.current = volume
+  }, [volume])
 
   // keep engine in sync with scene selection (mix tweaks go through setLayer)
   useEffect(() => {
@@ -117,13 +130,27 @@ export function App() {
     [pushToast],
   )
 
+  // debounced session autosave: slider drags fire dozens of changes, so the
+  // write trails the last one instead of hitting storage per input event
   useEffect(() => {
-    storageAlerter.onResult(storage.set(SESSION_KEY, { sceneId, mix, volume } satisfies SessionSnapshot))
+    const id = window.setTimeout(() => {
+      storageAlerter.onResult(storage.set(SESSION_KEY, { sceneId, mix, volume } satisfies SessionSnapshot))
+    }, 300)
+    return () => window.clearTimeout(id)
   }, [storage, storageAlerter, sceneId, mix, volume])
 
   useEffect(() => {
     storageAlerter.onResult(storage.set(SAVED_MIXES_KEY, saved))
   }, [storage, storageAlerter, saved])
+
+  // announce a shared-mix load once, after mount (shared is a stable memo);
+  // deferred so the toast state update does not cascade into first paint
+  useEffect(() => {
+    if (!shared) return
+    const id = window.setTimeout(() => pushToast('info', 'Loaded shared mix. Shape it further, then save your own.'), 0)
+    return () => window.clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // a call or OS interruption suspended the context mid-session: say so
   useEffect(() => {
@@ -336,8 +363,21 @@ export function App() {
 
   const changeVolume = useCallback((v: number) => setVolume(v), [])
 
+  const copyMixLink = useCallback(() => {
+    const hash = encodeMix({ sceneId: sceneIdRef.current, mix: mixRef.current, volume: volumeRef.current })
+    const url = `${window.location.origin}${window.location.pathname}${hash}`
+    void copyText(url).then((ok) => {
+      if (ok) pushToast('success', 'Mix link copied. Anyone opening it hears your exact mix.')
+      else pushToast('warn', 'Could not reach the clipboard. Copy the address bar instead; the mix rides in it.')
+    })
+  }, [pushToast])
+
   const saveCurrent = useCallback(
     (name: string) => {
+      if (saved.length >= MAX_SAVED) {
+        pushToast('warn', `Shelf is full (${MAX_SAVED}). Remove a mix to save another.`)
+        return
+      }
       const entry: SavedMix = {
         id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
         name,
@@ -373,18 +413,103 @@ export function App() {
     [pushToast],
   )
 
-  // space bar toggles playback when not in a control
+  const renameSaved = useCallback(
+    (id: string, name: string) => {
+      setSaved((prev) => prev.map((s) => (s.id === id ? { ...s, name } : s)))
+      pushToast('info', 'Renamed.')
+    },
+    [pushToast],
+  )
+
+  const duplicateSaved = useCallback(
+    (entry: SavedMix) => {
+      if (saved.length >= MAX_SAVED) {
+        pushToast('warn', `Shelf is full (${MAX_SAVED}). Remove a mix to duplicate into.`)
+        return
+      }
+      const copy: SavedMix = {
+        ...entry,
+        id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        name: `${entry.name} copy`.slice(0, 48),
+        createdAt: Date.now(),
+      }
+      setSaved((prev) => [copy, ...prev])
+      pushToast('success', `Duplicated “${entry.name}”.`)
+    },
+    [saved.length, pushToast],
+  )
+
+  const importSaved = useCallback(
+    (rawList: unknown[]) => {
+      const incoming = sanitizeSavedMixes(rawList)
+      if (incoming.length === 0) {
+        pushToast('warn', 'That file held no valid mixes. Expected a MOTIF shelf export.')
+        return
+      }
+      const existingIds = new Set(saved.map((s) => s.id))
+      const fresh = incoming.map((s) =>
+        existingIds.has(s.id)
+          ? { ...s, id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}` }
+          : s,
+      )
+      const room = Math.max(0, MAX_SAVED - saved.length)
+      const kept = fresh.slice(0, room)
+      setSaved((prev) => [...kept, ...prev])
+      if (kept.length < fresh.length) {
+        pushToast('warn', `Imported ${kept.length} of ${fresh.length}: the shelf holds at most ${MAX_SAVED}.`)
+      } else {
+        pushToast('success', `Imported ${kept.length} mix${kept.length === 1 ? '' : 'es'}.`)
+      }
+    },
+    [saved, pushToast],
+  )
+
+  // global keys: Space play/pause, M mute, S stop, ? shortcuts.
+  // Never fire while typing; modifier chords are left to the browser.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code !== 'Space' || e.repeat) return
+      if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return
       const el = e.target as HTMLElement | null
-      if (el && ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(el.tagName)) return
-      e.preventDefault()
-      togglePlay()
+      const typing = el && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable)
+      if (e.key === 'Escape' && (shortcutsOpen || howItWorksOpen)) {
+        setShortcutsOpen(false)
+        setHowItWorksOpen(false)
+        return
+      }
+      if (typing) return
+      if (e.code === 'Space') {
+        // let a focused button handle its own Space activation
+        if (el && el.tagName === 'BUTTON') return
+        e.preventDefault()
+        togglePlay()
+        return
+      }
+      if (e.key === 'm' || e.key === 'M') {
+        setMuted((v) => !v)
+        return
+      }
+      if (e.key === 's' || e.key === 'S') {
+        e.preventDefault()
+        stop()
+        return
+      }
+      if (e.key === '?') {
+        e.preventDefault()
+        setShortcutsOpen(true)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [togglePlay])
+  }, [togglePlay, stop, shortcutsOpen, howItWorksOpen])
+
+  // the tab title carries the countdown so a background session stays useful
+  useEffect(() => {
+    const active = timerKind === 'running' || timerKind === 'fading'
+    document.title = active ? `MOTIF - ${formatClock(remaining)} left` : 'MOTIF - Soundscape Atelier'
+    return () => {
+      document.title = 'MOTIF - Soundscape Atelier'
+    }
+  }, [timerKind, remaining])
 
   // now-playing bar appears once the field scrolls away
   const fieldElRef = useRef<HTMLDivElement | null>(null)
@@ -405,6 +530,9 @@ export function App() {
       data-scene={scene.id}
       style={{ '--accent': scene.palette.accent } as CSSProperties}
     >
+      <a className="skip-link" href="#stage">
+        Skip to the instrument
+      </a>
       <ErrorBoundary contextLabel={scene.name}>
         <header className="topbar">
         <div className="topbar-inner">
@@ -418,12 +546,32 @@ export function App() {
               {playing === 'playing' && !muted && <span className="status-live">● live</span>}
               {muted && playing === 'playing' && <span className="status-muted">muted</span>}
             </span>
+            <button
+              type="button"
+              className="icon-btn theme-toggle"
+              onClick={() => setShortcutsOpen(true)}
+              aria-label="Keyboard shortcuts"
+              aria-haspopup="dialog"
+              title="Keyboard shortcuts"
+            >
+              <KeyboardIcon />
+            </button>
+            <button
+              type="button"
+              className="icon-btn theme-toggle"
+              onClick={() => setHowItWorksOpen(true)}
+              aria-label="How MOTIF works"
+              aria-haspopup="dialog"
+              title="How MOTIF works"
+            >
+              <InfoIcon />
+            </button>
             <ThemeToggle />
           </div>
         </div>
       </header>
 
-      <main className="stage">
+      <main className="stage" id="stage" tabIndex={-1}>
         <div className="studio-grid">
           <SoundField
             scene={scene}
@@ -462,12 +610,17 @@ export function App() {
           onSave={saveCurrent}
           onLoad={loadSaved}
           onDelete={deleteSaved}
+          onRename={renameSaved}
+          onDuplicate={duplicateSaved}
+          onImport={importSaved}
+          onCopyLink={copyMixLink}
         />
       </main>
 
       <footer className="foot">
         <p>
           Every sound is synthesized live in your browser. No recordings, no network, nothing collected.
+          <span className="foot-build"> Build {__BUILD_ID__}.</span>
         </p>
       </footer>
 
@@ -476,10 +629,14 @@ export function App() {
         playing={playing === 'playing'}
         muted={muted}
         elapsed={elapsed}
+        timerKind={timerKind}
+        remaining={remaining}
         visible={playing === 'playing' && !fieldVisible}
         onToggle={togglePlay}
         onMute={() => setMuted((m) => !m)}
       />
+      <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <HowItWorksDialog open={howItWorksOpen} onClose={() => setHowItWorksOpen(false)} />
       <Toasts toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
       </ErrorBoundary>
     </div>

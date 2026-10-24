@@ -110,6 +110,46 @@ export const CloseIcon = () => (
     <path d="M6 6l12 12M18 6 6 18" />
   </Svg>
 )
+export const PencilIcon = () => (
+  <Svg>
+    <path d="M4.5 19.5 5.6 15 16.2 4.4a1.8 1.8 0 0 1 2.6 0l0.8 0.8a1.8 1.8 0 0 1 0 2.6L9 18.4 4.5 19.5zM14.5 6.1l3.4 3.4" />
+  </Svg>
+)
+export const CopyIcon = () => (
+  <Svg>
+    <rect x="9" y="9" width="11" height="11" rx="2" />
+    <path d="M5 15V6a2 2 0 0 1 2-2h9" />
+  </Svg>
+)
+export const DownloadIcon = () => (
+  <Svg>
+    <path d="M12 4v11M7 10.5 12 15.5l5-5M5 19.5h14" />
+  </Svg>
+)
+export const UploadIcon = () => (
+  <Svg>
+    <path d="M12 15V4M7 8.5 12 3.5l5 5M5 19.5h14" />
+  </Svg>
+)
+export const LinkIcon = () => (
+  <Svg>
+    <path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1.5 1.5" />
+    <path d="M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6L12.5 17.5" />
+  </Svg>
+)
+export const InfoIcon = () => (
+  <Svg>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 11v5" />
+    <circle cx="12" cy="8" r="0.4" fill="currentColor" />
+  </Svg>
+)
+export const KeyboardIcon = () => (
+  <Svg>
+    <rect x="3" y="7" width="18" height="10" rx="2" />
+    <path d="M7 11h.01M11 11h.01M15 11h.01M7 14h.01M11 14h6" />
+  </Svg>
+)
 
 export const LAYER_ICONS = {
   air: AirIcon,

@@ -40,7 +40,8 @@ html[data-theme='light'] {
 
   --text-1: #1d222b;
   --text-2: #454c58;
-  --text-3: #67707f;
+  /* #5f6874 keeps 5.0:1 on the panel gradient's darkest stop (AA for body text) */
+  --text-3: #5f6874;
 
   --danger: #b4573f;
 

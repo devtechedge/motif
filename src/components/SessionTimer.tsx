@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { TimerKind } from '../types'
 import { formatClock } from '../lib/format'
 
@@ -11,6 +12,16 @@ interface SessionTimerProps {
 }
 
 export function SessionTimer({ kind, minutes, remaining, onSelect }: SessionTimerProps) {
+  const [custom, setCustom] = useState('')
+  const customValue = Number.parseInt(custom, 10)
+  const customValid = Number.isInteger(customValue) && customValue >= 1 && customValue <= 180
+
+  const applyCustom = () => {
+    if (!customValid) return
+    onSelect(customValue)
+    setCustom('')
+  }
+
   return (
     <section className="panel timer" aria-label="Session timer">
       <header className="panel-head">
@@ -20,7 +31,7 @@ export function SessionTimer({ kind, minutes, remaining, onSelect }: SessionTime
             ? 'Complete. Select a length to begin another'
             : kind === 'fading'
               ? 'Fading out now, like a tide going out'
-              : 'Fades out gently when the time is up'}
+              : 'Fades out gently at the end. Pausing the sound pauses the clock'}
         </p>
       </header>
       <div className="timer-row" role="group" aria-label="Session length">
@@ -44,6 +55,29 @@ export function SessionTimer({ kind, minutes, remaining, onSelect }: SessionTime
             <span className="timer-unit"> min</span>
           </button>
         ))}
+      </div>
+      <div className="timer-custom">
+        <label className="timer-custom-label" htmlFor="timer-custom-min">
+          Custom
+        </label>
+        <input
+          id="timer-custom-min"
+          type="number"
+          className="text-input timer-custom-input"
+          min={1}
+          max={180}
+          step={1}
+          placeholder="1-180"
+          value={custom}
+          onChange={(e) => setCustom(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') applyCustom()
+          }}
+        />
+        <span className="timer-unit">min</span>
+        <button type="button" className="btn-ghost" onClick={applyCustom} disabled={!customValid}>
+          Set
+        </button>
       </div>
       {(kind === 'running' || kind === 'fading') && (
         <p className="timer-readout" aria-live="off">

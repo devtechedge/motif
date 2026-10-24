@@ -47,10 +47,10 @@ describe('ErrorBoundary', () => {
     expect(container.querySelector('button')?.textContent).toBe('Reload MOTIF')
   })
 
-  it('recovers when the next render does not throw', () => {
+  it('keeps the fallback until the page is reloaded (no silent auto-recovery)', () => {
     render(true)
     expect(container.querySelector('.crash-fallback')).not.toBeNull()
     render(false)
-    expect(container.querySelector('.crash-fallback')).toBeNull()
+    expect(container.querySelector('.crash-fallback')).not.toBeNull()
   })
 })
