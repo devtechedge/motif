@@ -315,7 +315,9 @@ test.describe('MOTIF journey QA', () => {
       await page.addInitScript((t) => {
         try {
           localStorage.setItem('motif:theme:v1', t)
-        } catch {}
+        } catch {
+          // localStorage can be blocked; the theme still applies for the session
+        }
       }, theme)
       await page.goto('/')
       return page.evaluate(() => {
