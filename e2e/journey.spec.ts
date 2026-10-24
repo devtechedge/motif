@@ -190,6 +190,25 @@ test.describe('MOTIF journey QA', () => {
     }
   })
 
+  test('first visit follows the operating system color scheme', async ({ browser }) => {
+    const light = await browser.newContext({ colorScheme: 'light' })
+    const lightPage = await light.newPage()
+    await lightPage.goto('/')
+    await expect(lightPage.locator('html')).toHaveAttribute('data-theme', 'light')
+    // an explicit toggle still wins over the OS preference
+    await lightPage.getByRole('button', { name: 'Switch to dark mode' }).click()
+    await expect(lightPage.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await lightPage.reload()
+    await expect(lightPage.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await light.close()
+
+    const dark = await browser.newContext({ colorScheme: 'dark' })
+    const darkPage = await dark.newPage()
+    await darkPage.goto('/')
+    await expect(darkPage.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await dark.close()
+  })
+
   test('reduced motion keeps the app composed and functional', async ({ page }) => {
     const problems = watchDiagnostics(page)
     await page.emulateMedia({ reducedMotion: 'reduce' })
