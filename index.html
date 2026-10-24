@@ -5,16 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="MOTIF, a soundscape atelier. Compose living atmospheres for focus, calm, reading and drift. Every sound is synthesized live in your browser." />
     <meta name="theme-color" content="#08090d" />
+    <meta property="og:title" content="MOTIF - Soundscape Atelier" />
+    <meta property="og:description" content="Compose living atmospheres for focus, calm, reading and drift. Every sound is synthesized live in your browser." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://motif-liard-three.vercel.app/" />
+    <meta property="og:image" content="https://motif-liard-three.vercel.app/og.png" />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="640" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MOTIF - Soundscape Atelier" />
+    <meta name="twitter:description" content="Compose living atmospheres for focus, calm, reading and drift. Every sound is synthesized live in your browser." />
+    <meta name="twitter:image" content="https://motif-liard-three.vercel.app/og.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preload" href="/fonts/fraunces.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin />
     <title>MOTIF - Soundscape Atelier</title>
     <script>
-      // set the theme before first paint (no flash of the wrong theme)
+      // set the theme before first paint (no flash of the wrong theme);
+      // stored choice wins, otherwise follow the operating system
       ;(function () {
-        var theme = 'dark'
+        var theme = null
         try {
           var stored = localStorage.getItem('motif:theme:v1')
           if (stored === 'light' || stored === 'dark') theme = stored
         } catch (e) {}
+        if (!theme) {
+          try {
+            theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+          } catch (e) {
+            theme = 'dark'
+          }
+        }
         document.documentElement.dataset.theme = theme
       })()
     </script>
